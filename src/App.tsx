@@ -44,6 +44,12 @@ function Content() {
     setView("chat");
   };
 
+  const handleNewBusiness = () => {
+    setView("landing");
+    setSelectedConversationId(null);
+    setBusinessContext(null);
+  };
+
   if (loggedInUser === undefined) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -67,6 +73,7 @@ function Content() {
                 selectedConversationId={selectedConversationId}
                 onConversationSelect={setSelectedConversationId}
                 businessContext={businessContext}
+                onNewBusiness={handleNewBusiness}
               />
             </div>
             <div className="w-[70%]">

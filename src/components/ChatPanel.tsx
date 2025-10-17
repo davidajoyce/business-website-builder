@@ -12,9 +12,10 @@ interface ChatPanelProps {
     businessName: string;
     websiteUrl: string | null;
   } | null;
+  onNewBusiness: () => void;
 }
 
-export function ChatPanel({ selectedConversationId, onConversationSelect, businessContext }: ChatPanelProps) {
+export function ChatPanel({ selectedConversationId, onConversationSelect, businessContext, onNewBusiness }: ChatPanelProps) {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [setupStep, setSetupStep] = useState<"website-url" | "generating">("generating");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -114,7 +115,15 @@ export function ChatPanel({ selectedConversationId, onConversationSelect, busine
       {/* Business Information */}
       {businessContext && (
         <div className="border-b border-gray-200 p-6 bg-white">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Business Info</h3>
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="text-lg font-semibold text-gray-800">Business Info</h3>
+            <button
+              onClick={onNewBusiness}
+              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+            >
+              New Business
+            </button>
+          </div>
           <div className="space-y-1 text-sm text-gray-600">
             <p><span className="font-medium">Name:</span> {businessContext.businessName}</p>
             {businessContext.websiteUrl && (
