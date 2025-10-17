@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 interface DocumentPanelProps {
   conversationId: Id<"conversations"> | null;
@@ -11,6 +12,7 @@ interface DocumentPanelProps {
 export function DocumentPanel({ conversationId }: DocumentPanelProps) {
   const [content, setContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   
   const document = useQuery(
     api.documents.getDocumentByConversation,
@@ -97,12 +99,20 @@ export function DocumentPanel({ conversationId }: DocumentPanelProps) {
           </div>
           <div className="flex space-x-2">
             <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
+              onClick={() => setIsEditMode(!isEditMode)}
+              className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
             >
-              {isSaving ? "Saving..." : "Save"}
+              {isEditMode ? "Preview" : "Edit"}
             </button>
+            {isEditMode && (
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </button>
+            )}
             <button
               onClick={handleExport}
               className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
@@ -113,14 +123,20 @@ export function DocumentPanel({ conversationId }: DocumentPanelProps) {
         </div>
       </div>
 
-      {/* Document Editor */}
-      <div className="flex-1 p-4">
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          className="w-full h-full p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm"
-          placeholder="Your website specification will appear here..."
-        />
+      {/* Document Content */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {isEditMode ? (
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="w-full h-full p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm"
+            placeholder="Your website specification will appear here..."
+          />
+        ) : (
+          <div className="prose prose-slate max-w-none">
+            <ReactMarkdown>{content}</ReactMarkdown>
+          </div>
+        )}
       </div>
 
       {/* Document Stats */}
