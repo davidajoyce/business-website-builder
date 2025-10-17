@@ -63,6 +63,19 @@ export function DocumentPanel({ conversationId }: DocumentPanelProps) {
     toast.success("Document exported!");
   };
 
+  const handleCopyForLovable = async () => {
+    if (!content) return;
+
+    try {
+      await navigator.clipboard.writeText(content);
+      window.open("https://lovable.dev/", "_blank", "noopener,noreferrer");
+      toast.success("Copied to clipboard! Opening Lovable...");
+    } catch (error) {
+      console.error("Error copying to clipboard:", error);
+      toast.error("Failed to copy to clipboard");
+    }
+  };
+
   if (!conversationId) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500">
@@ -113,6 +126,12 @@ export function DocumentPanel({ conversationId }: DocumentPanelProps) {
                 {isSaving ? "Saving..." : "Save"}
               </button>
             )}
+            <button
+              onClick={handleCopyForLovable}
+              className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
+            >
+              Copy for Lovable
+            </button>
             <button
               onClick={handleExport}
               className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
