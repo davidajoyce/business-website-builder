@@ -6,6 +6,8 @@ export const createConversation = mutation({
   args: {
     title: v.string(),
     initialMessage: v.string(),
+    businessName: v.optional(v.string()),
+    websiteUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -16,6 +18,8 @@ export const createConversation = mutation({
     const conversationId = await ctx.db.insert("conversations", {
       userId,
       title: args.title,
+      businessName: args.businessName,
+      websiteUrl: args.websiteUrl,
       messages: [{
         role: "user",
         content: args.initialMessage,

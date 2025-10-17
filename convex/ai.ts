@@ -2,6 +2,7 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 import OpenAI from "openai";
+import type { BusinessReviewsResult } from "./reviews";
 
 export const generateWebsiteSpec = action({
   args: {
@@ -18,6 +19,47 @@ export const generateWebsiteSpec = action({
       throw new Error("Conversation not found");
     }
 
+    // Fetch external data in parallel (reviews, future: firecrawl, etc.)
+    const dataPromises: Promise<BusinessReviewsResult | null>[] = [];
+
+    // Only fetch reviews if we have a business name
+    if (conversation.businessName) {
+      dataPromises.push(
+        ctx.runAction(api.reviews.fetchBusinessReviews, {
+          businessName: conversation.businessName,
+        })
+      );
+    } else {
+      dataPromises.push(Promise.resolve(null));
+    }
+
+    // TODO: Add more parallel data fetching here (e.g., Firecrawl)
+    // dataPromises.push(ctx.runAction(api.firecrawl.fetchWebsiteContent, { url: conversation.websiteUrl }));
+
+    // Wait for all data fetching to complete
+    const [reviewsData] = await Promise.all(dataPromises);
+
+    // Build context from fetched data
+    let additionalContext = "";
+
+    if (reviewsData && reviewsData.success && reviewsData.reviews.length > 0) {
+      const reviewCount = reviewsData.reviews.length;
+      const avgRating = (reviewsData.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1);
+      const reviewSummary = reviewsData.reviews.slice(0, 5).map(r =>
+        `- ${r.author} (${r.rating}/5): "${r.text.slice(0, 150)}${r.text.length > 150 ? '...' : ''}"`
+      ).join('\n');
+
+      additionalContext += `\n\n## Customer Reviews Data
+Business: ${reviewsData.businessName}
+${reviewsData.address ? `Address: ${reviewsData.address}` : ''}
+Average Rating: ${avgRating}/5 (${reviewCount} reviews)
+
+Recent Reviews:
+${reviewSummary}
+
+Use these reviews to understand customer sentiment, common themes, and what customers value about this business.`;
+    }
+
     // Check if a document already exists for this conversation
     let existingDocument = await ctx.runQuery(api.documents.getDocumentByConversation, {
       conversationId: args.conversationId,
@@ -28,20 +70,20 @@ export const generateWebsiteSpec = action({
 
     if (existingDocument) {
       // Update existing specification
-      systemPrompt = `You are a web consultant. The user has an existing website specification and wants to make changes to it. Update the specification based on their request while maintaining the overall structure and format. Keep all sections that aren't being modified.`;
-      
+      systemPrompt = `You are a web consultant. The user has an existing website specification and wants to make changes to it. Update the specification based on their request while maintaining the overall structure and format. Keep all sections that aren't being modified.${additionalContext ? ' Consider the provided customer review data to enhance the specification.' : ''}`;
+
       userMessage = `Here is the current website specification:
 
 ${existingDocument.content}
 
-User's update request: ${args.userInput}
+User's update request: ${args.userInput}${additionalContext}
 
 Please update the specification based on this request.`;
     } else {
       // Create new specification
-      systemPrompt = `You are a web consultant. Create a comprehensive website specification based on the user's business information. Include: Business Overview, Website Goals, Content Strategy, Design Requirements, and Technical Specifications. Format as a well-structured document with clear headings.`;
-      
-      userMessage = `Create a website specification for: ${args.userInput}`;
+      systemPrompt = `You are a web consultant. Create a comprehensive website specification based on the user's business information. Include: Business Overview, Website Goals, Content Strategy, Design Requirements, and Technical Specifications. Format as a well-structured document with clear headings.${additionalContext ? ' Use the provided customer review data to understand customer sentiment and tailor the website specification to highlight the business strengths and address customer needs.' : ''}`;
+
+      userMessage = `Create a website specification for: ${args.userInput}${additionalContext}`;
     }
 
     let aiResponse: string;

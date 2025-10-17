@@ -11,14 +11,16 @@ interface ChatPanelProps {
 
 export function ChatPanel({ selectedConversationId, onConversationSelect }: ChatPanelProps) {
   const [message, setMessage] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  
+
   const conversations = useQuery(api.conversations.getConversations) || [];
   const selectedConversation = useQuery(
     api.conversations.getConversation,
     selectedConversationId ? { conversationId: selectedConversationId } : "skip"
   );
-  
+
   const createConversation = useMutation(api.conversations.createConversation);
   const addMessage = useMutation(api.conversations.addMessage);
   const generateSpec = useAction(api.ai.generateWebsiteSpec);
@@ -31,11 +33,13 @@ export function ChatPanel({ selectedConversationId, onConversationSelect }: Chat
       let conversationId = selectedConversationId;
 
       if (!conversationId) {
-        // Create new conversation
+        // Create new conversation with business context
         const title = message.slice(0, 50) + (message.length > 50 ? "..." : "");
         conversationId = await createConversation({
           title,
           initialMessage: message,
+          businessName: businessName.trim() || undefined,
+          websiteUrl: websiteUrl.trim() || undefined,
         });
         onConversationSelect(conversationId);
       } else {
@@ -66,6 +70,8 @@ export function ChatPanel({ selectedConversationId, onConversationSelect }: Chat
   const handleNewConversation = () => {
     onConversationSelect(null as any);
     setMessage("");
+    setBusinessName("");
+    setWebsiteUrl("");
   };
 
   return (
@@ -133,11 +139,31 @@ export function ChatPanel({ selectedConversationId, onConversationSelect }: Chat
 
       {/* Message Input */}
       <div className="border-t border-gray-200 p-4">
+        {/* Business Context - Only show for new conversations */}
+        {!selectedConversationId && (
+          <div className="mb-3 space-y-2">
+            <input
+              type="text"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              placeholder="Business Name (optional - for fetching reviews)"
+              className="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+            <input
+              type="text"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              placeholder="Current Website URL (optional)"
+              className="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+          </div>
+        )}
+
         <div className="flex space-x-2">
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Describe your business or paste your current website URL..."
+            placeholder="Describe your business and what you want for your website..."
             className="flex-1 p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             rows={3}
             onKeyDown={(e) => {

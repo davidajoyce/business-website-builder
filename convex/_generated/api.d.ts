@@ -18,6 +18,7 @@ import type * as auth from "../auth.js";
 import type * as conversations from "../conversations.js";
 import type * as documents from "../documents.js";
 import type * as http from "../http.js";
+import type * as reviews from "../reviews.js";
 import type * as router from "../router.js";
 
 /**
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   conversations: typeof conversations;
   documents: typeof documents;
   http: typeof http;
+  reviews: typeof reviews;
   router: typeof router;
 }>;
 export declare const api: FilterApi<

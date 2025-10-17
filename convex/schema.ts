@@ -6,6 +6,8 @@ const applicationTables = {
   conversations: defineTable({
     userId: v.id("users"),
     title: v.string(),
+    businessName: v.optional(v.string()),
+    websiteUrl: v.optional(v.string()),
     messages: v.array(v.object({
       role: v.union(v.literal("user"), v.literal("assistant")),
       content: v.string(),
