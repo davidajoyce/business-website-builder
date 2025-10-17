@@ -22,6 +22,7 @@ import type * as http from "../http.js";
 import type * as reviews from "../reviews.js";
 import type * as router from "../router.js";
 import type * as seo from "../seo.js";
+import type * as specTemplate from "../specTemplate.js";
 import type * as urlFilter from "../urlFilter.js";
 
 /**
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   reviews: typeof reviews;
   router: typeof router;
   seo: typeof seo;
+  specTemplate: typeof specTemplate;
   urlFilter: typeof urlFilter;
 }>;
 export declare const api: FilterApi<
