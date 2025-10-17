@@ -95,10 +95,13 @@ async function scrapeUrl(url: string, apiKey: string): Promise<ScrapeResponse> {
     },
     body: JSON.stringify({
       url: url,
-      onlyMainContent: false,
+      onlyMainContent: true, // Extract only main content, exclude headers/navs/footers
+      removeBase64Images: true, // Remove images from output (default true, but explicit)
+      blockAds: true, // Block ads for cleaner content
+      excludeTags: ["img", "picture", "svg"], // Explicitly exclude image tags
       maxAge: 172800000,
-      parsers: [],
-      formats: ["markdown"],
+      parsers: [], // No PDF parsing
+      formats: ["markdown"], // Only markdown, no screenshots
       waitFor: 5000,
     }),
   };
