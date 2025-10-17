@@ -76,13 +76,22 @@ async function searchPlace(
 
     const data = (await response.json()) as PlaceSearchResponse;
 
+    console.log(`[Google Places Search] Query: "${businessName}"`);
+    console.log(`[Google Places Search] Found ${data.places?.length || 0} places`);
+
     if (!data.places || data.places.length === 0) {
-      console.log(`No places found for business: ${businessName}`);
+      console.log(`[Google Places Search] No places found for business: ${businessName}`);
       return null;
     }
 
     // Return the first (most relevant) result
     const place = data.places[0];
+    console.log(`[Google Places Search] Selected place:`, {
+      placeId: place.id,
+      displayName: place.displayName.text,
+      address: place.formattedAddress,
+    });
+
     return {
       placeId: place.id,
       displayName: place.displayName.text,
@@ -125,18 +134,30 @@ async function fetchPlaceReviews(
 
     const data = (await response.json()) as PlaceDetailsResponse;
 
+    console.log(`[Google Places Reviews] Place ID: ${placeId}`);
+    console.log(`[Google Places Reviews] Found ${data.reviews?.length || 0} reviews`);
+
     if (!data.reviews || data.reviews.length === 0) {
-      console.log(`No reviews found for place: ${placeId}`);
+      console.log(`[Google Places Reviews] No reviews found for place: ${placeId}`);
       return [];
     }
 
     // Transform reviews into our format
-    return data.reviews.map((review) => ({
+    const transformedReviews = data.reviews.map((review) => ({
       author: review.authorAttribution?.displayName || "Anonymous",
       rating: review.rating || 0,
       text: review.text?.text || "No text provided",
       publishTime: review.publishTime || "Unknown date",
     }));
+
+    console.log(`[Google Places Reviews] Sample review:`, {
+      author: transformedReviews[0].author,
+      rating: transformedReviews[0].rating,
+      textPreview: transformedReviews[0].text.slice(0, 100) + "...",
+      publishTime: transformedReviews[0].publishTime,
+    });
+
+    return transformedReviews;
   } catch (error) {
     console.error("Error fetching reviews:", error);
     return [];
@@ -152,10 +173,14 @@ export const fetchBusinessReviews = action({
     businessName: v.string(),
   },
   handler: async (_, args): Promise<BusinessReviewsResult> => {
+    console.log(`\n========================================`);
+    console.log(`[fetchBusinessReviews] Starting for: "${args.businessName}"`);
+    console.log(`========================================\n`);
+
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
 
     if (!apiKey) {
-      console.error("GOOGLE_PLACES_API_KEY not found in environment variables");
+      console.error("[fetchBusinessReviews] ERROR: GOOGLE_PLACES_API_KEY not found in environment variables");
       return {
         success: false,
         businessName: args.businessName,
@@ -169,6 +194,7 @@ export const fetchBusinessReviews = action({
       const placeInfo = await searchPlace(args.businessName, apiKey);
 
       if (!placeInfo) {
+        console.log(`[fetchBusinessReviews] FAILED: Business not found`);
         return {
           success: false,
           businessName: args.businessName,
@@ -180,6 +206,17 @@ export const fetchBusinessReviews = action({
       // Step 2: Fetch reviews for the place
       const reviews = await fetchPlaceReviews(placeInfo.placeId, apiKey);
 
+      console.log(`\n[fetchBusinessReviews] SUCCESS Summary:`);
+      console.log(`- Business: ${args.businessName}`);
+      console.log(`- Place ID: ${placeInfo.placeId}`);
+      console.log(`- Address: ${placeInfo.address || 'N/A'}`);
+      console.log(`- Reviews fetched: ${reviews.length}`);
+      if (reviews.length > 0) {
+        const avgRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+        console.log(`- Average rating: ${avgRating}/5`);
+      }
+      console.log(`========================================\n`);
+
       return {
         success: true,
         businessName: args.businessName,
@@ -188,7 +225,7 @@ export const fetchBusinessReviews = action({
         reviews,
       };
     } catch (error) {
-      console.error("Error in fetchBusinessReviews:", error);
+      console.error("[fetchBusinessReviews] ERROR:", error);
       return {
         success: false,
         businessName: args.businessName,
