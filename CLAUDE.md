@@ -106,6 +106,17 @@ The app uses Convex's built-in OpenAI integration (not a direct OpenAI client):
 - Configured via `CONVEX_OPENAI_BASE_URL` and `CONVEX_OPENAI_API_KEY`
 - Model: `gpt-4o-mini` with temperature 0.7, max_tokens 3000
 
+### Firecrawl Integration
+The app uses Firecrawl to scrape existing website content in parallel with Google Reviews:
+- Uses Firecrawl v2 API with raw `fetch` calls (not SDK)
+- Endpoints: `/v2/map` (get all URLs) and `/v2/scrape` (extract markdown)
+- API key stored as Convex environment variable: `FIRECRAWL_API_KEY`
+- Flow: Map website → AI filters relevant URLs → Parallel scrape → Append to spec
+- Key files:
+  - `convex/firecrawl.ts` - Map and scrape actions
+  - `convex/urlFilter.ts` - OpenAI-powered URL filtering
+  - `convex/ai.ts` - Orchestrates parallel data fetching
+
 ### Document-Conversation Relationship
 - One conversation → One document (1:1 relationship)
 - Documents are linked via `conversationId`
@@ -125,7 +136,13 @@ Uses Convex Auth with anonymous authentication:
 Required environment variables in `.env.local`:
 - `CONVEX_DEPLOYMENT` - Convex deployment identifier (e.g., "dev:keen-warbler-83")
 - `VITE_CONVEX_URL` - Convex cloud URL (e.g., "https://keen-warbler-83.convex.cloud")
-- Backend also needs `CONVEX_OPENAI_BASE_URL` and `CONVEX_OPENAI_API_KEY` (set in Convex dashboard)
+
+Backend environment variables (set in Convex dashboard):
+- `CONVEX_OPENAI_BASE_URL` - OpenAI API base URL
+- `CONVEX_OPENAI_API_KEY` - OpenAI API key for spec generation
+- `OPENAI_API_KEY` - OpenAI API key for URL filtering
+- `GOOGLE_PLACES_API_KEY` - Google Places API key for reviews
+- `FIRECRAWL_API_KEY` - Firecrawl API key for website scraping
 
 ## Important Notes
 

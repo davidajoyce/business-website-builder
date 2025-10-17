@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { api } from "./_generated/api";
 import OpenAI from "openai";
 import type { BusinessReviewsResult } from "./reviews";
+import type { WebsiteContentResult } from "./firecrawl";
 
 export const generateWebsiteSpec = action({
   args: {
@@ -19,25 +20,33 @@ export const generateWebsiteSpec = action({
       throw new Error("Conversation not found");
     }
 
-    // Fetch external data in parallel (reviews, future: firecrawl, etc.)
-    const dataPromises: Promise<BusinessReviewsResult | null>[] = [];
-
-    // Only fetch reviews if we have a business name
-    if (conversation.businessName) {
-      dataPromises.push(
-        ctx.runAction(api.reviews.fetchBusinessReviews, {
+    // Fetch external data in parallel (reviews, website content, etc.)
+    const reviewsPromise: Promise<BusinessReviewsResult | null> = conversation.businessName
+      ? ctx.runAction(api.reviews.fetchBusinessReviews, {
           businessName: conversation.businessName,
+        }).catch((error) => {
+          console.error("[AI] Reviews fetch failed:", error);
+          return null;
         })
-      );
-    } else {
-      dataPromises.push(Promise.resolve(null));
-    }
+      : Promise.resolve(null);
 
-    // TODO: Add more parallel data fetching here (e.g., Firecrawl)
-    // dataPromises.push(ctx.runAction(api.firecrawl.fetchWebsiteContent, { url: conversation.websiteUrl }));
+    const websiteContentPromise: Promise<WebsiteContentResult | null> = conversation.websiteUrl
+      ? ctx.runAction(api.firecrawl.fetchWebsiteContent, {
+          websiteUrl: conversation.websiteUrl,
+          businessContext: conversation.businessName || args.userInput,
+        }).catch((error) => {
+          console.error("[AI] Website content fetch failed:", error);
+          return null;
+        })
+      : Promise.resolve(null);
 
-    // Wait for all data fetching to complete
-    const [reviewsData] = await Promise.all(dataPromises);
+    // Wait for all data fetching to complete in parallel
+    console.log("[AI] Waiting for external data (reviews + website content)...");
+    const [reviewsData, websiteContentData] = await Promise.all([
+      reviewsPromise,
+      websiteContentPromise,
+    ]);
+    console.log("[AI] External data fetching complete");
 
     // Check if a document already exists for this conversation
     let existingDocument = await ctx.runQuery(api.documents.getDocumentByConversation, {
@@ -216,6 +225,30 @@ Please update the specification based on this request.`;
       });
 
       aiResponse += reviewsMarkdown;
+    }
+
+    // Append website content as markdown section if available
+    if (websiteContentData && websiteContentData.success && websiteContentData.content.length > 0) {
+      let websiteMarkdown = `\n\n---\n\n## Website Content Analysis\n\n`;
+      websiteMarkdown += `**Source:** ${websiteContentData.baseUrl}\n`;
+      websiteMarkdown += `**Total URLs Found:** ${websiteContentData.totalUrls}\n`;
+      websiteMarkdown += `**URLs Scraped:** ${websiteContentData.scrapedUrls}\n\n`;
+
+      websiteContentData.content.forEach((scraped, index) => {
+        websiteMarkdown += `### ${scraped.title || `Page ${index + 1}`}\n`;
+        websiteMarkdown += `**URL:** ${scraped.url}\n\n`;
+
+        // Add a preview of the markdown content (first 500 chars)
+        const preview = scraped.markdown.slice(0, 500);
+        websiteMarkdown += `${preview}${scraped.markdown.length > 500 ? '...' : ''}\n\n`;
+
+        // Optionally include full content in a collapsible section
+        if (scraped.markdown.length > 500) {
+          websiteMarkdown += `<details>\n<summary>View full content</summary>\n\n${scraped.markdown}\n\n</details>\n\n`;
+        }
+      });
+
+      aiResponse += websiteMarkdown;
     }
 
     // Add the AI response to the conversation
