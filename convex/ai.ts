@@ -47,10 +47,10 @@ Please update the specification based on this request.`;
     let aiResponse: string;
 
     try {
-      // Use the bundled OpenAI API
+      // Call OpenAI directly, bypassing Convex proxy
       const openai = new OpenAI({
-        baseURL: process.env.CONVEX_OPENAI_BASE_URL,
-        apiKey: process.env.CONVEX_OPENAI_API_KEY,
+        apiKey: process.env.OPENAI_API_KEY,
+        baseURL: "https://api.openai.com/v1"
       });
 
       const completion = await openai.chat.completions.create({
