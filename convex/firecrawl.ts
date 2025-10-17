@@ -58,7 +58,7 @@ async function mapWebsite(url: string, apiKey: string): Promise<MapResponse> {
       url: url,
       limit: 5000,
       includeSubdomains: false,
-      sitemap: "include",
+      sitemap: "skip",
     }),
   };
 
