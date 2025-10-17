@@ -57,6 +57,19 @@ async function searchPlace(
 
   const payload = {
     textQuery: businessName,
+    regionCode: "AU",
+    locationRestriction: {
+      rectangle: {
+        low: {
+          latitude: -43.64,  // Southern point of Australia
+          longitude: 113.09, // Western point of Australia
+        },
+        high: {
+          latitude: -10.41,  // Northern point of Australia
+          longitude: 153.64, // Eastern point of Australia
+        },
+      },
+    },
   };
 
   try {
