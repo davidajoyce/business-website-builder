@@ -39,27 +39,6 @@ export const generateWebsiteSpec = action({
     // Wait for all data fetching to complete
     const [reviewsData] = await Promise.all(dataPromises);
 
-    // Build context from fetched data
-    let additionalContext = "";
-
-    if (reviewsData && reviewsData.success && reviewsData.reviews.length > 0) {
-      const reviewCount = reviewsData.reviews.length;
-      const avgRating = (reviewsData.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1);
-      const reviewSummary = reviewsData.reviews.slice(0, 5).map(r =>
-        `- ${r.author} (${r.rating}/5): "${r.text.slice(0, 150)}${r.text.length > 150 ? '...' : ''}"`
-      ).join('\n');
-
-      additionalContext += `\n\n## Customer Reviews Data
-Business: ${reviewsData.businessName}
-${reviewsData.address ? `Address: ${reviewsData.address}` : ''}
-Average Rating: ${avgRating}/5 (${reviewCount} reviews)
-
-Recent Reviews:
-${reviewSummary}
-
-Use these reviews to understand customer sentiment, common themes, and what customers value about this business.`;
-    }
-
     // Check if a document already exists for this conversation
     let existingDocument = await ctx.runQuery(api.documents.getDocumentByConversation, {
       conversationId: args.conversationId,
@@ -70,20 +49,20 @@ Use these reviews to understand customer sentiment, common themes, and what cust
 
     if (existingDocument) {
       // Update existing specification
-      systemPrompt = `You are a web consultant. The user has an existing website specification and wants to make changes to it. Update the specification based on their request while maintaining the overall structure and format. Keep all sections that aren't being modified.${additionalContext ? ' Consider the provided customer review data to enhance the specification.' : ''}`;
+      systemPrompt = `You are a web consultant. The user has an existing website specification and wants to make changes to it. Update the specification based on their request while maintaining the overall structure and format. Keep all sections that aren't being modified.`;
 
       userMessage = `Here is the current website specification:
 
 ${existingDocument.content}
 
-User's update request: ${args.userInput}${additionalContext}
+User's update request: ${args.userInput}
 
 Please update the specification based on this request.`;
     } else {
       // Create new specification
-      systemPrompt = `You are a web consultant. Create a comprehensive website specification based on the user's business information. Include: Business Overview, Website Goals, Content Strategy, Design Requirements, and Technical Specifications. Format as a well-structured document with clear headings.${additionalContext ? ' Use the provided customer review data to understand customer sentiment and tailor the website specification to highlight the business strengths and address customer needs.' : ''}`;
+      systemPrompt = `You are a web consultant. Create a comprehensive website specification based on the user's business information. Include: Business Overview, Website Goals, Content Strategy, Design Requirements, and Technical Specifications. Format as a well-structured document with clear headings.`;
 
-      userMessage = `Create a website specification for: ${args.userInput}${additionalContext}`;
+      userMessage = `Create a website specification for: ${args.userInput}`;
     }
 
     let aiResponse: string;
@@ -209,6 +188,29 @@ Please update the specification based on this request.`;
 ---
 *This specification serves as a comprehensive guide for creating a professional website that meets business objectives and user needs.*`;
       }
+    }
+
+    // Append reviews as markdown section if available
+    if (reviewsData && reviewsData.success && reviewsData.reviews.length > 0) {
+      const reviewCount = reviewsData.reviews.length;
+      const avgRating = (reviewsData.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1);
+
+      let reviewsMarkdown = `\n\n---\n\n## Customer Reviews\n\n`;
+      reviewsMarkdown += `**Business:** ${reviewsData.businessName}\n`;
+      if (reviewsData.address) {
+        reviewsMarkdown += `**Address:** ${reviewsData.address}\n`;
+      }
+      reviewsMarkdown += `**Average Rating:** ${avgRating}/5 ⭐ (${reviewCount} reviews)\n\n`;
+
+      reviewsData.reviews.forEach((review, index) => {
+        reviewsMarkdown += `### Review ${index + 1}\n`;
+        reviewsMarkdown += `**Author:** ${review.author}\n`;
+        reviewsMarkdown += `**Rating:** ${review.rating}/5 ⭐\n`;
+        reviewsMarkdown += `**Date:** ${review.publishTime}\n\n`;
+        reviewsMarkdown += `> ${review.text}\n\n`;
+      });
+
+      aiResponse += reviewsMarkdown;
     }
 
     // Add the AI response to the conversation
