@@ -213,20 +213,29 @@ Please update the specification based on this request.`;
     // Append reviews as markdown section if available
     if (reviewsData && reviewsData.success && reviewsData.reviews.length > 0) {
       const reviewCount = reviewsData.reviews.length;
-      const avgRating = (reviewsData.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1);
 
       let reviewsMarkdown = `\n\n---\n\n## Customer Reviews\n\n`;
       reviewsMarkdown += `**Business:** ${reviewsData.businessName}\n`;
       if (reviewsData.address) {
         reviewsMarkdown += `**Address:** ${reviewsData.address}\n`;
       }
-      reviewsMarkdown += `**Average Rating:** ${avgRating}/5 ⭐ (${reviewCount} reviews)\n`;
+
+      // Use overall rating from Google Places if available
+      if (reviewsData.rating && reviewsData.userRatingCount) {
+        reviewsMarkdown += `**Overall Rating:** ${reviewsData.rating}/5 ⭐ (${reviewsData.userRatingCount} total ratings on Google)\n`;
+        reviewsMarkdown += `**Sample Reviews Shown:** ${reviewCount} reviews\n`;
+      } else {
+        // Fallback to calculating from reviews
+        const avgRating = (reviewsData.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1);
+        reviewsMarkdown += `**Average Rating:** ${avgRating}/5 ⭐ (${reviewCount} reviews)\n`;
+      }
 
       if (reviewsData.googleMapsUri) {
         reviewsMarkdown += `**[View all reviews on Google Maps](${reviewsData.googleMapsUri})**\n`;
       }
       reviewsMarkdown += `\n`;
 
+      console.log(`[AI] Adding ${reviewsData.reviews.length} individual reviews to markdown...`);
       reviewsData.reviews.forEach((review, index) => {
         reviewsMarkdown += `### Review ${index + 1}\n`;
         reviewsMarkdown += `**Author:** ${review.author}\n`;
@@ -235,6 +244,7 @@ Please update the specification based on this request.`;
         reviewsMarkdown += `> ${review.text}\n\n`;
       });
 
+      console.log(`[AI] Total reviews markdown length: ${reviewsMarkdown.length} characters`);
       aiResponse += reviewsMarkdown;
     }
 

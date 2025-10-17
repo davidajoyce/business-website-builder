@@ -6,13 +6,17 @@ interface PlaceSearchResponse {
     id: string;
     displayName: { text: string };
     formattedAddress?: string;
+    websiteUri?: string;
   }>;
 }
 
 interface PlaceDetailsResponse {
   id: string;
   displayName: { text: string };
+  formattedAddress?: string;
   googleMapsUri?: string;
+  rating?: number;
+  userRatingCount?: number;
   reviews?: Array<{
     authorAttribution?: {
       displayName: string;
@@ -38,6 +42,8 @@ export interface BusinessReviewsResult {
   placeId?: string;
   address?: string;
   googleMapsUri?: string;
+  rating?: number;
+  userRatingCount?: number;
   reviews: ReviewData[];
   error?: string;
 }
@@ -48,13 +54,13 @@ export interface BusinessReviewsResult {
 async function searchPlace(
   businessName: string,
   apiKey: string
-): Promise<{ placeId: string; displayName: string; address?: string } | null> {
+): Promise<{ placeId: string; displayName: string; address?: string; websiteUri?: string } | null> {
   const url = "https://places.googleapis.com/v1/places:searchText";
 
   const headers = {
     "Content-Type": "application/json",
     "X-Goog-Api-Key": apiKey,
-    "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress",
+    "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.websiteUri",
   };
 
   const payload = {
@@ -105,12 +111,14 @@ async function searchPlace(
       placeId: place.id,
       displayName: place.displayName.text,
       address: place.formattedAddress,
+      websiteUri: place.websiteUri,
     });
 
     return {
       placeId: place.id,
       displayName: place.displayName.text,
       address: place.formattedAddress,
+      websiteUri: place.websiteUri,
     };
   } catch (error) {
     console.error("Error searching for place:", error);
@@ -124,13 +132,13 @@ async function searchPlace(
 async function fetchPlaceReviews(
   placeId: string,
   apiKey: string
-): Promise<{ reviews: ReviewData[]; googleMapsUri?: string }> {
+): Promise<{ reviews: ReviewData[]; googleMapsUri?: string; rating?: number; userRatingCount?: number; displayName?: string; formattedAddress?: string }> {
   const url = `https://places.googleapis.com/v1/places/${placeId}`;
 
   const headers = {
     "Content-Type": "application/json",
     "X-Goog-Api-Key": apiKey,
-    "X-Goog-FieldMask": "id,displayName,reviews,googleMapsUri",
+    "X-Goog-FieldMask": "id,displayName,formattedAddress,rating,userRatingCount,reviews,googleMapsUri",
   };
 
   try {
@@ -154,7 +162,14 @@ async function fetchPlaceReviews(
 
     if (!data.reviews || data.reviews.length === 0) {
       console.log(`[Google Places Reviews] No reviews found for place: ${placeId}`);
-      return { reviews: [], googleMapsUri: data.googleMapsUri };
+      return {
+        reviews: [],
+        googleMapsUri: data.googleMapsUri,
+        rating: data.rating,
+        userRatingCount: data.userRatingCount,
+        displayName: data.displayName?.text,
+        formattedAddress: data.formattedAddress,
+      };
     }
 
     // Transform reviews into our format
@@ -166,6 +181,7 @@ async function fetchPlaceReviews(
     }));
 
     console.log(`[Google Places Reviews] All ${transformedReviews.length} reviews:`);
+    console.log(`[Google Places Reviews] Overall Rating: ${data.rating || 'N/A'}/5 (${data.userRatingCount || 0} total ratings)`);
     transformedReviews.forEach((review, index) => {
       console.log(`\nReview #${index + 1}:`);
       console.log(`  Author: ${review.author}`);
@@ -178,7 +194,14 @@ async function fetchPlaceReviews(
       console.log(`\n[Google Places Reviews] Google Maps Link: ${data.googleMapsUri}`);
     }
 
-    return { reviews: transformedReviews, googleMapsUri: data.googleMapsUri };
+    return {
+      reviews: transformedReviews,
+      googleMapsUri: data.googleMapsUri,
+      rating: data.rating,
+      userRatingCount: data.userRatingCount,
+      displayName: data.displayName?.text,
+      formattedAddress: data.formattedAddress,
+    };
   } catch (error) {
     console.error("Error fetching reviews:", error);
     return { reviews: [] };
@@ -225,26 +248,25 @@ export const fetchBusinessReviews = action({
       }
 
       // Step 2: Fetch reviews for the place
-      const { reviews, googleMapsUri } = await fetchPlaceReviews(placeInfo.placeId, apiKey);
+      const { reviews, googleMapsUri, rating, userRatingCount, displayName, formattedAddress } = await fetchPlaceReviews(placeInfo.placeId, apiKey);
 
       console.log(`\n[fetchBusinessReviews] SUCCESS Summary:`);
-      console.log(`- Business: ${args.businessName}`);
+      console.log(`- Business: ${displayName || args.businessName}`);
       console.log(`- Place ID: ${placeInfo.placeId}`);
-      console.log(`- Address: ${placeInfo.address || 'N/A'}`);
+      console.log(`- Address: ${formattedAddress || placeInfo.address || 'N/A'}`);
       console.log(`- Google Maps URL: ${googleMapsUri || 'N/A'}`);
+      console.log(`- Overall Rating: ${rating || 'N/A'}/5 (${userRatingCount || 0} total ratings)`);
       console.log(`- Reviews fetched: ${reviews.length}`);
-      if (reviews.length > 0) {
-        const avgRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
-        console.log(`- Average rating: ${avgRating}/5`);
-      }
       console.log(`========================================\n`);
 
       return {
         success: true,
-        businessName: args.businessName,
+        businessName: displayName || args.businessName,
         placeId: placeInfo.placeId,
-        address: placeInfo.address,
+        address: formattedAddress || placeInfo.address,
         googleMapsUri,
+        rating,
+        userRatingCount,
         reviews,
       };
     } catch (error) {
@@ -253,6 +275,75 @@ export const fetchBusinessReviews = action({
         success: false,
         businessName: args.businessName,
         reviews: [],
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
+});
+
+export interface BusinessInfoResult {
+  success: boolean;
+  businessName: string;
+  websiteUrl?: string;
+  address?: string;
+  placeId?: string;
+  error?: string;
+}
+
+/**
+ * Get basic business information including website URL from Google Places
+ * This is called from the frontend before creating a conversation
+ */
+export const getBusinessInfo = action({
+  args: {
+    businessName: v.string(),
+  },
+  handler: async (_, args): Promise<BusinessInfoResult> => {
+    console.log(`\n========================================`);
+    console.log(`[getBusinessInfo] Looking up: "${args.businessName}"`);
+    console.log(`========================================\n`);
+
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+
+    if (!apiKey) {
+      console.error("[getBusinessInfo] ERROR: GOOGLE_PLACES_API_KEY not found");
+      return {
+        success: false,
+        businessName: args.businessName,
+        error: "Google Places API key not configured",
+      };
+    }
+
+    try {
+      const placeInfo = await searchPlace(args.businessName, apiKey);
+
+      if (!placeInfo) {
+        console.log(`[getBusinessInfo] Business not found: "${args.businessName}"`);
+        return {
+          success: false,
+          businessName: args.businessName,
+          error: "Business not found on Google Places",
+        };
+      }
+
+      console.log(`\n[getBusinessInfo] SUCCESS:`);
+      console.log(`- Business: ${placeInfo.displayName}`);
+      console.log(`- Address: ${placeInfo.address || 'N/A'}`);
+      console.log(`- Website: ${placeInfo.websiteUri || 'Not found'}`);
+      console.log(`========================================\n`);
+
+      return {
+        success: true,
+        businessName: placeInfo.displayName,
+        websiteUrl: placeInfo.websiteUri,
+        address: placeInfo.address,
+        placeId: placeInfo.placeId,
+      };
+    } catch (error) {
+      console.error("[getBusinessInfo] ERROR:", error);
+      return {
+        success: false,
+        businessName: args.businessName,
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
