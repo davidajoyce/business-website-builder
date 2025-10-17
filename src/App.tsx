@@ -13,7 +13,7 @@ export default function App() {
   return (
     <div className="h-full flex flex-col bg-gray-50">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm h-16 flex justify-between items-center border-b shadow-sm px-4">
-        <h2 className="text-xl font-semibold text-primary">Business Website Spec Generator</h2>
+        <h2 className="text-xl font-semibold text-primary">Web Refresh</h2>
         <SignOutButton />
       </header>
       <main className="flex-1 overflow-hidden">
@@ -62,14 +62,14 @@ function Content() {
           />
         ) : (
           <div className="flex h-full">
-            <div className="w-1/2 border-r border-gray-200">
+            <div className="w-[30%] border-r border-gray-200">
               <ChatPanel
                 selectedConversationId={selectedConversationId}
                 onConversationSelect={setSelectedConversationId}
                 businessContext={businessContext}
               />
             </div>
-            <div className="w-1/2">
+            <div className="w-[70%]">
               <DocumentPanel conversationId={selectedConversationId} />
             </div>
           </div>
@@ -81,7 +81,7 @@ function Content() {
           <div className="w-full max-w-md mx-auto p-8">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-primary mb-4">
-                Business Website Spec Generator
+                Web Refresh
               </h1>
               <p className="text-xl text-secondary">
                 Generate comprehensive website specifications with AI assistance

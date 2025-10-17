@@ -43,7 +43,7 @@ export function BusinessNamePage({ onBusinessSubmit, onLookup }: BusinessNamePag
       <div className="w-full max-w-md px-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary mb-3">
-            Business Website Spec Generator
+            Web Refresh
           </h1>
           <p className="text-lg text-secondary">
             Enter your business name to get started
