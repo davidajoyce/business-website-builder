@@ -12,6 +12,7 @@ interface PlaceSearchResponse {
 interface PlaceDetailsResponse {
   id: string;
   displayName: { text: string };
+  googleMapsUri?: string;
   reviews?: Array<{
     authorAttribution?: {
       displayName: string;
@@ -36,6 +37,7 @@ export interface BusinessReviewsResult {
   businessName: string;
   placeId?: string;
   address?: string;
+  googleMapsUri?: string;
   reviews: ReviewData[];
   error?: string;
 }
@@ -122,13 +124,13 @@ async function searchPlace(
 async function fetchPlaceReviews(
   placeId: string,
   apiKey: string
-): Promise<ReviewData[]> {
+): Promise<{ reviews: ReviewData[]; googleMapsUri?: string }> {
   const url = `https://places.googleapis.com/v1/places/${placeId}`;
 
   const headers = {
     "Content-Type": "application/json",
     "X-Goog-Api-Key": apiKey,
-    "X-Goog-FieldMask": "id,displayName,reviews",
+    "X-Goog-FieldMask": "id,displayName,reviews,googleMapsUri",
   };
 
   try {
@@ -142,7 +144,7 @@ async function fetchPlaceReviews(
       console.error(
         `Google Places reviews fetch failed: ${response.status} - ${errorText}`
       );
-      return [];
+      return { reviews: [] };
     }
 
     const data = (await response.json()) as PlaceDetailsResponse;
@@ -152,7 +154,7 @@ async function fetchPlaceReviews(
 
     if (!data.reviews || data.reviews.length === 0) {
       console.log(`[Google Places Reviews] No reviews found for place: ${placeId}`);
-      return [];
+      return { reviews: [], googleMapsUri: data.googleMapsUri };
     }
 
     // Transform reviews into our format
@@ -172,10 +174,14 @@ async function fetchPlaceReviews(
       console.log(`  Text: ${review.text}`);
     });
 
-    return transformedReviews;
+    if (data.googleMapsUri) {
+      console.log(`\n[Google Places Reviews] Google Maps Link: ${data.googleMapsUri}`);
+    }
+
+    return { reviews: transformedReviews, googleMapsUri: data.googleMapsUri };
   } catch (error) {
     console.error("Error fetching reviews:", error);
-    return [];
+    return { reviews: [] };
   }
 }
 
@@ -219,12 +225,13 @@ export const fetchBusinessReviews = action({
       }
 
       // Step 2: Fetch reviews for the place
-      const reviews = await fetchPlaceReviews(placeInfo.placeId, apiKey);
+      const { reviews, googleMapsUri } = await fetchPlaceReviews(placeInfo.placeId, apiKey);
 
       console.log(`\n[fetchBusinessReviews] SUCCESS Summary:`);
       console.log(`- Business: ${args.businessName}`);
       console.log(`- Place ID: ${placeInfo.placeId}`);
       console.log(`- Address: ${placeInfo.address || 'N/A'}`);
+      console.log(`- Google Maps URL: ${googleMapsUri || 'N/A'}`);
       console.log(`- Reviews fetched: ${reviews.length}`);
       if (reviews.length > 0) {
         const avgRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
@@ -237,6 +244,7 @@ export const fetchBusinessReviews = action({
         businessName: args.businessName,
         placeId: placeInfo.placeId,
         address: placeInfo.address,
+        googleMapsUri,
         reviews,
       };
     } catch (error) {

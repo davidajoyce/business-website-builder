@@ -200,7 +200,12 @@ Please update the specification based on this request.`;
       if (reviewsData.address) {
         reviewsMarkdown += `**Address:** ${reviewsData.address}\n`;
       }
-      reviewsMarkdown += `**Average Rating:** ${avgRating}/5 ⭐ (${reviewCount} reviews)\n\n`;
+      reviewsMarkdown += `**Average Rating:** ${avgRating}/5 ⭐ (${reviewCount} reviews)\n`;
+
+      if (reviewsData.googleMapsUri) {
+        reviewsMarkdown += `**[View all reviews on Google Maps](${reviewsData.googleMapsUri})**\n`;
+      }
+      reviewsMarkdown += `\n`;
 
       reviewsData.reviews.forEach((review, index) => {
         reviewsMarkdown += `### Review ${index + 1}\n`;
