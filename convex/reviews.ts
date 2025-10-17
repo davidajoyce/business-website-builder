@@ -163,11 +163,13 @@ async function fetchPlaceReviews(
       publishTime: review.publishTime || "Unknown date",
     }));
 
-    console.log(`[Google Places Reviews] Sample review:`, {
-      author: transformedReviews[0].author,
-      rating: transformedReviews[0].rating,
-      textPreview: transformedReviews[0].text.slice(0, 100) + "...",
-      publishTime: transformedReviews[0].publishTime,
+    console.log(`[Google Places Reviews] All ${transformedReviews.length} reviews:`);
+    transformedReviews.forEach((review, index) => {
+      console.log(`\nReview #${index + 1}:`);
+      console.log(`  Author: ${review.author}`);
+      console.log(`  Rating: ${review.rating}/5`);
+      console.log(`  Date: ${review.publishTime}`);
+      console.log(`  Text: ${review.text}`);
     });
 
     return transformedReviews;
