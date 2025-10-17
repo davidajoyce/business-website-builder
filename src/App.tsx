@@ -10,12 +10,12 @@ import { Id } from "../convex/_generated/dataModel";
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm h-16 flex justify-between items-center border-b shadow-sm px-4">
         <h2 className="text-xl font-semibold text-primary">Business Website Spec Generator</h2>
         <SignOutButton />
       </header>
-      <main className="flex-1">
+      <main className="flex-1 overflow-hidden">
         <Content />
       </main>
       <Toaster />
