@@ -1,10 +1,11 @@
-import { Authenticated, Unauthenticated, useQuery } from "convex/react";
+import { Authenticated, Unauthenticated, useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { SignInForm } from "./SignInForm";
 import { SignOutButton } from "./SignOutButton";
 import { Toaster } from "sonner";
 import { ChatPanel } from "./components/ChatPanel";
 import { DocumentPanel } from "./components/DocumentPanel";
+import { BusinessNamePage } from "./components/BusinessNamePage";
 import { useState } from "react";
 import { Id } from "../convex/_generated/dataModel";
 
@@ -26,6 +27,22 @@ export default function App() {
 function Content() {
   const loggedInUser = useQuery(api.auth.loggedInUser);
   const [selectedConversationId, setSelectedConversationId] = useState<Id<"conversations"> | null>(null);
+  const [view, setView] = useState<"landing" | "chat">("landing");
+  const [businessContext, setBusinessContext] = useState<{
+    businessName: string;
+    websiteUrl: string | null;
+  } | null>(null);
+
+  const getBusinessInfo = useAction(api.reviews.getBusinessInfo);
+
+  const handleBusinessLookup = async (businessName: string) => {
+    return await getBusinessInfo({ businessName });
+  };
+
+  const handleBusinessSubmit = (businessName: string, websiteUrl: string | null) => {
+    setBusinessContext({ businessName, websiteUrl });
+    setView("chat");
+  };
 
   if (loggedInUser === undefined) {
     return (
@@ -38,19 +55,27 @@ function Content() {
   return (
     <div className="flex flex-col h-full">
       <Authenticated>
-        <div className="flex h-full">
-          <div className="w-1/2 border-r border-gray-200">
-            <ChatPanel 
-              selectedConversationId={selectedConversationId}
-              onConversationSelect={setSelectedConversationId}
-            />
+        {view === "landing" ? (
+          <BusinessNamePage
+            onBusinessSubmit={handleBusinessSubmit}
+            onLookup={handleBusinessLookup}
+          />
+        ) : (
+          <div className="flex h-full">
+            <div className="w-1/2 border-r border-gray-200">
+              <ChatPanel
+                selectedConversationId={selectedConversationId}
+                onConversationSelect={setSelectedConversationId}
+                businessContext={businessContext}
+              />
+            </div>
+            <div className="w-1/2">
+              <DocumentPanel conversationId={selectedConversationId} />
+            </div>
           </div>
-          <div className="w-1/2">
-            <DocumentPanel conversationId={selectedConversationId} />
-          </div>
-        </div>
+        )}
       </Authenticated>
-      
+
       <Unauthenticated>
         <div className="flex items-center justify-center h-full">
           <div className="w-full max-w-md mx-auto p-8">
