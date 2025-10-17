@@ -53,11 +53,13 @@ This is a Business Website Spec Generator built with Convex and React. It's an A
 
 **Important Pattern:** The AI action (`generateWebsiteSpec`) orchestrates the full flow:
 1. Fetches conversation context
-2. Checks for existing document
-3. Generates appropriate prompt (create vs update)
-4. Calls OpenAI API
-5. Adds assistant message to conversation
-6. Creates or updates the document
+2. Fetches external data in parallel (reviews, website content, SEO analysis)
+3. Checks for existing document
+4. Generates appropriate prompt (create vs update)
+5. Calls OpenAI API
+6. Appends external data sections (reviews, website content, SEO) to the spec
+7. Adds assistant message to conversation
+8. Creates or updates the document
 
 ### Frontend (React + Vite)
 
@@ -111,10 +113,20 @@ The app uses Firecrawl to scrape existing website content in parallel with Googl
 - Uses Firecrawl v2 API with raw `fetch` calls (not SDK)
 - Endpoints: `/v2/map` (get all URLs) and `/v2/scrape` (extract markdown)
 - API key stored as Convex environment variable: `FIRECRAWL_API_KEY`
-- Flow: Map website → AI filters relevant URLs → Parallel scrape → Append to spec
+- Flow: Scrape homepage → Filter links by keywords → Parallel scrape top pages → Append to spec
 - Key files:
-  - `convex/firecrawl.ts` - Map and scrape actions
-  - `convex/urlFilter.ts` - OpenAI-powered URL filtering
+  - `convex/firecrawl.ts` - Scrape and filter actions
+  - `convex/ai.ts` - Orchestrates parallel data fetching
+
+### Gumloop SEO Integration
+The app uses Gumloop to generate SEO analysis for the website:
+- Uses Gumloop API with raw `fetch` calls
+- Flow: Start pipeline → Poll for completion (max 3 minutes) → Extract markdown → Append to spec
+- Runs in parallel with reviews and website scraping
+- Focus area: Content Optimization (Hero, Services, Header, Meta, FAQ, CTAs, etc.)
+- API credentials stored as Convex environment variables
+- Key files:
+  - `convex/seo.ts` - Gumloop API integration and polling logic
   - `convex/ai.ts` - Orchestrates parallel data fetching
 
 ### Document-Conversation Relationship
@@ -143,6 +155,10 @@ Backend environment variables (set in Convex dashboard):
 - `OPENAI_API_KEY` - OpenAI API key for URL filtering
 - `GOOGLE_PLACES_API_KEY` - Google Places API key for reviews
 - `FIRECRAWL_API_KEY` - Firecrawl API key for website scraping
+- `GUMLOOP_API_KEY` - Gumloop API key for SEO analysis
+- `GUMLOOP_USER_ID` - Gumloop user ID
+- `GUMLOOP_SAVED_ITEM_ID` - Gumloop pipeline ID for SEO analysis
+- `GUMLOOP_FOCUS_AREA` - SEO analysis focus area (optional, defaults to content optimization)
 
 ## Important Notes
 

@@ -4,6 +4,7 @@ import { api } from "./_generated/api";
 import OpenAI from "openai";
 import type { BusinessReviewsResult } from "./reviews";
 import type { WebsiteContentResult } from "./firecrawl";
+import type { SEOAnalysisResult } from "./seo";
 
 export const generateWebsiteSpec = action({
   args: {
@@ -40,11 +41,21 @@ export const generateWebsiteSpec = action({
         })
       : Promise.resolve(null);
 
+    const seoPromise: Promise<SEOAnalysisResult | null> = conversation.websiteUrl
+      ? ctx.runAction(api.seo.fetchSEOAnalysis, {
+          websiteUrl: conversation.websiteUrl,
+        }).catch((error) => {
+          console.error("[AI] SEO analysis fetch failed:", error);
+          return null;
+        })
+      : Promise.resolve(null);
+
     // Wait for all data fetching to complete in parallel
-    console.log("[AI] Waiting for external data (reviews + website content)...");
-    const [reviewsData, websiteContentData] = await Promise.all([
+    console.log("[AI] Waiting for external data (reviews + website content + SEO)...");
+    const [reviewsData, websiteContentData, seoData] = await Promise.all([
       reviewsPromise,
       websiteContentPromise,
+      seoPromise,
     ]);
     console.log("[AI] External data fetching complete");
 
@@ -249,6 +260,16 @@ Please update the specification based on this request.`;
       });
 
       aiResponse += websiteMarkdown;
+    }
+
+    // Append SEO analysis as markdown section if available
+    if (seoData && seoData.success && seoData.markdown) {
+      let seoMarkdown = `\n\n---\n\n## SEO Analysis\n\n`;
+      seoMarkdown += `**Source:** ${seoData.url}\n`;
+      seoMarkdown += `**Focus Area:** Content Optimization (Hero, Services, Header, Meta, FAQ, CTAs, etc.)\n\n`;
+      seoMarkdown += seoData.markdown;
+
+      aiResponse += seoMarkdown;
     }
 
     // Add the AI response to the conversation

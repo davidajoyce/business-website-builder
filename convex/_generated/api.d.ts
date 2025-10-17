@@ -21,6 +21,7 @@ import type * as firecrawl from "../firecrawl.js";
 import type * as http from "../http.js";
 import type * as reviews from "../reviews.js";
 import type * as router from "../router.js";
+import type * as seo from "../seo.js";
 import type * as urlFilter from "../urlFilter.js";
 
 /**
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   reviews: typeof reviews;
   router: typeof router;
+  seo: typeof seo;
   urlFilter: typeof urlFilter;
 }>;
 export declare const api: FilterApi<
